@@ -18,8 +18,10 @@ import kotlinx.coroutines.launch
 import siroha.floating.donation.R
 import siroha.floating.donation.model.AppLayout
 import siroha.floating.donation.model.BubbleConfig
+import siroha.floating.donation.model.AppSettings
 import siroha.floating.donation.model.OverlayConfig
 import siroha.floating.donation.model.OverlayStatus
+import siroha.floating.donation.model.OverlayType
 import siroha.floating.donation.overlay.AddOverlayPanel
 import siroha.floating.donation.overlay.BubbleMenu
 import siroha.floating.donation.overlay.BubbleMenuAction
@@ -44,6 +46,7 @@ class OverlayService : Service() {
     // Independen dari jumlah overlay aktif — mencerminkan AppSettings.bubbleEnabled,
     // di-load saat service start dan diperbarui lewat setBubbleEnabled()
     private var bubbleEnabled = true
+    private var cachedSettings = AppSettings()
     private var bubbleMenu: BubbleMenu? = null
     private var bubbleSettingsPanel: BubbleSettingsPanel? = null
     private var addOverlayPanel: AddOverlayPanel? = null
@@ -117,6 +120,7 @@ class OverlayService : Service() {
         // Load settings
         serviceScope.launch {
             val settings = storage.getSettings().first()
+            cachedSettings = settings
             bubbleConfig = settings.bubbleConfig
             bubbleEnabled = settings.bubbleEnabled
             Logger.debugEnabled = settings.debugLogging
@@ -192,6 +196,18 @@ class OverlayService : Service() {
         window.create()
         overlayWindows[config.id] = window
         Logger.overlayCreate(config.name)
+
+        // Apply WebView settings from AppSettings so toggles in Settings
+        // actually affect the WebView (previously applySettings() was defined
+        // but never called — toggles had no effect).
+        if (config.type == OverlayType.WEB) {
+            window.applyWebViewSettings(
+                javaScriptEnabled = cachedSettings.javaScriptEnabled,
+                mediaPlaybackEnabled = cachedSettings.mediaPlaybackEnabled,
+                cacheEnabled = cachedSettings.cacheEnabled,
+                cookiesEnabled = cachedSettings.cookiesEnabled
+            )
+        }
 
         // Kalau overlay ini dinyalakan saat aplikasi lain yang sudah punya App
         // Layout aktif untuk overlay ini kebetulan sedang di depan, langsung
@@ -342,7 +358,8 @@ class OverlayService : Service() {
         bubbleEnabled = enabled
         serviceScope.launch {
             val settings = storage.getSettings().first()
-            storage.saveSettings(settings.copy(bubbleEnabled = enabled))
+            cachedSettings = settings.copy(bubbleEnabled = enabled)
+            storage.saveSettings(cachedSettings)
         }
 
         if (enabled) {
@@ -743,7 +760,8 @@ class OverlayService : Service() {
         // sudah dipindah-pindah menu.
         serviceScope.launch {
             val settings = storage.getSettings().first()
-            storage.saveSettings(settings.copy(bubbleEnabled = false))
+            cachedSettings = settings.copy(bubbleEnabled = false)
+            storage.saveSettings(cachedSettings)
         }
 
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -775,7 +793,8 @@ class OverlayService : Service() {
         // sini juga, jadi bubbleEnabled wajib ikut di-persist false.
         serviceScope.launch {
             val settings = storage.getSettings().first()
-            storage.saveSettings(settings.copy(bubbleEnabled = false))
+            cachedSettings = settings.copy(bubbleEnabled = false)
+            storage.saveSettings(cachedSettings)
         }
 
         stopForeground(STOP_FOREGROUND_REMOVE)

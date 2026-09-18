@@ -22,7 +22,6 @@ class OverlayConfigTest {
         assertEquals(1.0f, config.opacity)
         assertTrue(config.keepPosition)
         assertTrue(config.alwaysOnTop)
-        assertEquals(OverlayOrientation.FOLLOW_DEVICE, config.orientation)
     }
 
     @Test

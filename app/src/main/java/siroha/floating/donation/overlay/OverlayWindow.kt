@@ -96,8 +96,11 @@ class OverlayWindow(
             config.width, config.height,
             screenSize.x, screenSize.y
         )
+        // When keepPosition is false, ignore saved position and use defaults
+        val posX = if (config.keepPosition) config.positionX else 100
+        val posY = if (config.keepPosition) config.positionY else 100
         val (clampedX, clampedY) = ScreenUtils.clampPosition(
-            config.positionX, config.positionY, clampedW, clampedH,
+            posX, posY, clampedW, clampedH,
             screenSize.x, screenSize.y
         )
 
@@ -555,6 +558,22 @@ class OverlayWindow(
             containerView = null
         } catch (e: Exception) {
             Logger.e("Error destroying overlay window", e)
+        }
+    }
+
+    fun applyWebViewSettings(
+        javaScriptEnabled: Boolean = true,
+        mediaPlaybackEnabled: Boolean = true,
+        cacheEnabled: Boolean = true,
+        cookiesEnabled: Boolean = true
+    ) {
+        if (config.type == OverlayType.WEB) {
+            overlayWebView?.applySettings(
+                javaScriptEnabled = javaScriptEnabled,
+                mediaPlaybackEnabled = mediaPlaybackEnabled,
+                cacheEnabled = cacheEnabled,
+                cookiesEnabled = cookiesEnabled
+            )
         }
     }
 
